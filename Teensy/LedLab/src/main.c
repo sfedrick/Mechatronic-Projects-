@@ -23,7 +23,7 @@ int main(void)
       //turns on pin d0
       PORTD=0x01;
       teensy_wait(ontime);
-      turns off all pins
+    //  turns off all pins
       PORTD=0x00;
       teensy_wait(offtime);
     }
