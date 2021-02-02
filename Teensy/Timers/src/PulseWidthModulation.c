@@ -5,16 +5,10 @@
  */
  // set the desired frequency of the cycles
  int	hertz=20;
-
  // set the duty how much of the cycle is spent on
- float duty=0.50;
-
+ float duty=1;
  //prescale frequency
  float preFreq=250000;
-
-
-
-
 #include "teensy_general.h"
 int main(void)
 {
