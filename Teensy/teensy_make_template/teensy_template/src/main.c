@@ -5,16 +5,20 @@
  */
 
 #include "teensy_general.h"
-
+#include "t_usb.h"
 int main(void)
 {
-    /* insert your hardware initialization here */
-	teensy_clockdivide(0);
-    teensy_wait(1000);
-    for(;;){
-        /* insert your main loop code here */
-		teensy_led(TOGGLE);
-        teensy_wait(1000);
-    }
-    return 0;   /* never reached */
+	m_usb_init();
+	unsigned int value;
+	m_usb_init();
+	while(!m_usb_isconnected()); // wait for a connection
+	while(1)
+	{
+	if(m_usb_rx_available())
+		{
+		value = m_usb_rx_char();
+		m_usb_tx_uint(value);
+		}
+	}
+  return 0;   /* never reached */
 }

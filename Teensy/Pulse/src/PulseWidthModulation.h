@@ -7,8 +7,6 @@
  //prescale frequency
  float preFreq=250000;
 
-
-
 // hertz sets the desired frequency of the cycles 100 hertz is good
 // duty sets the duty circle a number from 0 to 1.
 // larger it is the longer the pin stays on
