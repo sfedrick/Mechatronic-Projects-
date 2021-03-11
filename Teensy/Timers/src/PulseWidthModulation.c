@@ -4,9 +4,9 @@
  * License: <insert your license reference here>
  */
  // set the desired frequency of the cycles
- int	hertz=20;
+ int hertz=200;
  // set the duty how much of the cycle is spent on
- float duty=1;
+ float duty=0.5;
  //prescale frequency
  float preFreq=250000;
 #include "teensy_general.h"

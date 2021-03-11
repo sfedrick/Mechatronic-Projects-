@@ -12,11 +12,14 @@ int main(void)
 	m_usb_init();
 	//set c7 as an input
 	DDRC&=~(1<<7);
+	//make d0 an output
+	DDRD|=(1<<0);
 	//make d1 an output
 	DDRD|=(1<<1);
+
 	//stores the input value that goes into c7
 	int pinstate;
-
+	pinstate=PINC & (1<<7);
 	while(1){
 		//checks if the 7th bit is set
 		pinstate=PINC &(1<<7);

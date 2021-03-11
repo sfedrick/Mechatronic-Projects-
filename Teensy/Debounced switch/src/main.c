@@ -24,14 +24,10 @@ int main(void)
 	DDRD |= (1<<(1));
 	PORTD &=~(1<<(1));
 
-
+//initialize variables
 	int pinstate;
 	int press=0;
 	int mode;
-	unsigned int oldtime=0;
-	unsigned int newtime=0;
-	float dt=0;
-	float currentdt=0;
 	float averagepress;
 	while(1){
 		//bit_is_set is used to find out if a bit is set
