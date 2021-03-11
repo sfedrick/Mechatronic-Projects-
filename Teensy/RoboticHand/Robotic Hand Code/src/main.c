@@ -87,7 +87,7 @@ int angle3[size3+1];
 int duty3[size3+1];
 linInterp(min3,max3,size3,voltage3);
 linInterp(0,anglemax,size3,angle3);
-linInterp(0z,dutymax3,size3,duty3);
+linInterp(0,dutymax3,size3,duty3);
 
 
 //m_usb_init();
