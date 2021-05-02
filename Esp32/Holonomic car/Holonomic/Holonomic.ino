@@ -49,7 +49,7 @@ int Sconstrain(int X,int a,int b){
 }
 
 //Esp32 Status
- char AutomousState[20]="False";
+ char AutonomousState[30]="False";
  int auton=0;
  
  int reset=0;
@@ -59,7 +59,7 @@ int Sconstrain(int X,int a,int b){
  int motorspeedPercent=0;
  int SensorState=0;
  int GripperState=0;
-
+ int OnwallState=0;
 //autonmous states
  void RecieveState(){
   reset=getVal();
@@ -70,6 +70,7 @@ int Sconstrain(int X,int a,int b){
   motorspeedPercent=motorspeedPercent+getVal();
   SensorState= SensorState+getVal();
   GripperState=GripperState+getVal();
+  OnwallState=getVal();
   
   motorspeedPercent=Sconstrain(motorspeedPercent,0,100);
   SensorState=Sconstrain(SensorState,0,100);
@@ -90,7 +91,7 @@ int Sconstrain(int X,int a,int b){
  }
 
 void CheckState(){
-  String s="test1,test2,test3,test4";
+  String s=String(reset)+","+String(auton)+","+AutonomousState+",";
   sendplain(s);
   
 }
@@ -124,23 +125,51 @@ void setup() {
   attachHandler("/Check?val=",CheckState);
   attachHandler("/ ",handleRoot);
   
-  delay(2000);
+  
 }
-int testauton=0;
+
+
+//define end condition variable
+int onwall_init1=0;
+bool OnwallendCondition=false;
+bool onWallLoop(){
+  if(onwall_init1>100){
+    return true;
+    Serial.println("finished");
+    strcpy(AutonomousState,"finished");
+  }
+  else{
+  Serial.println("I will be in here for 5 secs");
+    Serial.println("On wall State: "+String(OnwallState)+" "+ String(onwall_init1));
+    strcpy(AutonomousState,"onwall state iteration");
+  onwall_init1+=1;
+   return false;}
+  
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
- 
+
 serve(server, body);
-/*
-if(auton==0){
- while(auton==0 && reset!=1){
-  if(testauton>100){
-    auton=0;
-  }
-  serve(server, body);
-  strcpy(AutnomousState, "TestAuton"+String(testauton));  
+
+//autonomous state onwall  
+  while(OnwallState==1 && reset!=1 && !OnwallendCondition){
+      serve(server, body);
+    //perform on wall state autonomous loop  
+      bool Endit=onWallLoop();
+    //end condition
+       if(Endit){
+        reset=1;
+       }
+    }
+    if(OnwallState==0){
+      //reset initial conditions
+       onwall_init1=0;
+    }
+
+ if(auton!=1){
+  //perform manual actions
+  strcpy(AutonomousState,"Manual Mode");
  }
-}
-*/
- 
+
 }

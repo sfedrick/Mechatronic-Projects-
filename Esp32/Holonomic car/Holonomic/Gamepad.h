@@ -78,7 +78,7 @@ left:5%;
   ToF reading:<span id="TOFreading"> TOF goes here </span><br>
   Sensor Direction:<span id="ServoSensor"> Theta </span><br>
   Servo Gripper:<span id="Servogripper"> Theta </span><br>
-  Autnomous:<span id="Autonomy"> True/False</span><br>
+  Autonomous:<span id="Autonomy"> True/False</span><br>
   </div>
 
     <div class="space">Movement</div><br>
@@ -127,14 +127,22 @@ var Sensorservostate=0;
 var Gripperstate=0;
 
 
+//autonomous states
+var auton=0;
+var Onwallstate=0;
+
 
 var esp32message=[];
 var esp32Status=[];
 
 
-//autonomous states
-var auton=0;
-var Onwallstate=0;
+sendState();
+
+
+
+
+
+
  
 var keyboardCode = function(event) {
   var code;
@@ -297,9 +305,14 @@ function keyUpHandler(event) {
       document.getElementById("closebutton").style = "background-color:#008CBA";
     }
 
-    Onwallstate=0;
-    document.getElementById("onWallbutton").style = "background-color:#008CBA";
+  
   }
+
+    if(code == 82 || code == "r") { // k key 
+      reset= 1;
+      document.getElementById("resetbutton").style = "background-color:orange";
+ 
+    }
     updateState();
   
   }
@@ -308,7 +321,7 @@ function sendState() {
     var xhttp = new XMLHttpRequest(); 
     //sets the url that we use to get the attach handler
     var str="Orders?val=";
-    var res=str.concat(reset,",",auton,",",forwardstate,",",rightstate,",",rotatestate,",",motorspeedstate,",",Sensorservostate,",",Gripperstate);
+    var res=str.concat(reset,",",auton,",",forwardstate,",",rightstate,",",rotatestate,",",motorspeedstate,",",Sensorservostate,",",Gripperstate,",",Onwallstate);
     xhttp.onreadystatechange = function() {
         if (this.status == 200 && this.readyState == 4) {
   //whatever you send as plain text or html in the function attached to the Orders?val=  attach handler gets displayed here 
@@ -334,8 +347,14 @@ function checkState() {
         if (this.status == 200 && this.readyState == 4) {
   //whatever you send as plain text or html in the function attached to the Check?val=  attach handler gets displayed here 
   //we split that plain text using commas 
-        esp32message=this.responseText.split(",");
-        //document.getElementById("MotorDirection").innerHTML = esp32satus[0];
+        esp32Status=this.responseText.split(",");
+        reset = parseInt(esp32Status[0]);
+        if(reset===1){
+          location.reload();
+        }
+        auton= parseInt(esp32Status[1]);
+
+        document.getElementById("Autonomy").innerHTML = esp32Status[2]; 
         
         }    
     };
