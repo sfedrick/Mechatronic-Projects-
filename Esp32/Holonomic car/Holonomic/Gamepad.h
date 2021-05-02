@@ -132,7 +132,9 @@ var esp32message=[];
 var esp32Status=[];
 
 
-
+//autonomous states
+var auton=0;
+var Onwallstate=0;
  
 var keyboardCode = function(event) {
   var code;
@@ -150,9 +152,9 @@ function updateState(){
 }
 
 
-//sticky keys
 
-var auton=0;
+
+
 
 function keyDownHandler(event) {
  var code = keyboardCode(event);
@@ -216,6 +218,12 @@ function keyDownHandler(event) {
       Gripperstate= -1;
       document.getElementById("closebutton").style = "background-color:lime";
     }
+
+     if(code == 89 || code == "y") { // y key 
+      Onwallstate= 1;
+      auton=1;
+      document.getElementById("onWallbutton").style = "background-color:lime";
+    }
  }
 
   if(code == 82 || code == "r") { // k key 
@@ -226,9 +234,10 @@ function keyDownHandler(event) {
 }
 
 function keyUpHandler(event) {
+  var code =keyboardCode(event);
 
   if(auton===0){
-  var code =keyboardCode(event);
+  
   if(code == 87 || code == 'w') { // w key  
       forwardstate = 0;
       document.getElementById("forwardbutton").style = "background-color:#008CBA";
@@ -287,6 +296,9 @@ function keyUpHandler(event) {
       Gripperstate= 0;
       document.getElementById("closebutton").style = "background-color:#008CBA";
     }
+
+    Onwallstate=0;
+    document.getElementById("onWallbutton").style = "background-color:#008CBA";
   }
     updateState();
   
