@@ -1,6 +1,6 @@
 #include <WiFi.h>
 #include "html510.h"
-
+#include "Gamepad.h"
 #define MotorSpeed1 36
 #define MotorSpeed2 39
 #define MotorSpeed3 35
@@ -25,29 +25,10 @@
 
 #define SERVOFREQ    60
 
-
-WiFiServer server(80);
-
-//html
 const char* ssid     = "Fios-G8WhZ";
 const char* password = "Jesuisungrenouille777";
+WiFiServer server(80);
 
-const char body[] PROGMEM = R"===(
-<!DOCTYPE html>
-<html><body>
-
-<H1>
-Hello
-</H1>
-
-
-<script>
-
-</script>
-
-
-</html>
-)===";
 
 
 /* web handler   */
