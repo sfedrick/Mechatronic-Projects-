@@ -75,10 +75,11 @@ left:5%;
   </div>
 
 <div class="info2">
-  ToF reading:<span id="TOFreading"> TOF goes here </span><br>
+  ToF reading:<span id="TOFreading"> TOF goes here </span>,<span id="ID"> Undefined </span><br>
   Sensor Direction:<span id="ServoSensor"> Theta </span><br>
   Servo Gripper:<span id="Servogripper"> Theta </span><br>
   Autonomous:<span id="Autonomy"> True/False</span><br>
+  InUrFace:<span id="InUrFace"> True/False</span><br>
   </div>
 
     <div class="space">Movement</div><br>
@@ -101,9 +102,11 @@ left:5%;
   <div class="space">Autonomous functions </div> <br>
   <button class="button" type="button" onclick="onWall()" id="onWallbutton">[Y]Get on wall</button>
   <button class="button" type="button" onclick="wallfollow()" id="wallfollowbutton">[U]Wall follow</button>
-  <button class="button" type="button" onclick="offwall()" id="offwallbutton">[I]Get off Wall</button>
-  <button class="button" type="button" onclick="circletrace()" id="circletracebutton">[P]Circle Trace</button>
-    <button class="button" type="button" onclick="scancan()" id="scanbutton">[O]Scan</button><br>
+  <button class="button" type="button" onclick="ccwturn()" id="ccwturnbutton">[I]-90 degree turn</button>
+  <button class="button" type="button" onclick="cwturn()" id="cwturnbutton">[P]+90 degree turn</button>
+  <button class="button" type="button" onclick="scancan()" id="scanbutton">[O]Scan</button>
+  <button class="button" type="button" onclick="caref" id="carefulfoward">[H]Foward</button>
+  <button class="button" type="button" onclick="GrabCan" id="GrabCanButton">[H]GrabCan</button>  
 
   <button class="button" type="button" onclick="setloc1()" id="setlocation1"> [Z] Set Location 1 </button>
   <button class="button" type="button" onclick="setloc2()" id="setlocation2"> [X] Set Location 2  </button>
@@ -168,8 +171,6 @@ function keyDownHandler(event) {
  var code = keyboardCode(event);
 
  if(auton===0){
-  
- 
     if(code == 87 || code == 'w') { // w key 
       forwardstate = 1;
       document.getElementById("forwardbutton").style = "background-color:lime";
@@ -232,6 +233,23 @@ function keyDownHandler(event) {
       auton=1;
       document.getElementById("onWallbutton").style = "background-color:lime";
     }
+
+/*
+
+     <button class="button" type="button" onclick="wallfollow()" id="wallfollowbutton">[U]Wall follow</button>
+  <button class="button" type="button" onclick="offwall()" id="offwallbutton">[I]Get off Wall</button>
+  <button class="button" type="button" onclick="circletrace()" id="circletracebutton">[P]Circle Trace</button>
+    <button class="button" type="button" onclick="scancan()" id="scanbutton">[O]Scan</button><br>
+
+*/
+
+
+
+
+
+
+
+    
  }
 
   if(code == 82 || code == "r") { // k key 
@@ -355,7 +373,10 @@ function checkState() {
         auton= parseInt(esp32Status[1]);
 
         document.getElementById("Autonomy").innerHTML = esp32Status[2]; 
-        
+        document.getElementById("PositionX").innerHTML = esp32Status[3]; 
+        document.getElementById("PositionY").innerHTML = esp32Status[4]; 
+        document.getElementById("Orientation").innerHTML = esp32Status[5]; 
+        document.getElementById("TOFreading").innerHTML = esp32Status[6]; 
         }    
     };
     xhttp.open("GET", res, true);

@@ -14,9 +14,8 @@
 #include "tankJS.h"
 
 WiFiServer server(80);
-const char* ssid     = "Fios-G8WhZ";
-const char* password = "Jesuisungrenouille777";
-
+const char* ssid     = "Walkerspot";
+const char* password = "spotpass";
 const char *body;
 
 /********************/
@@ -129,8 +128,8 @@ void setup()
   Serial.begin(115200);
   WiFi.mode(WIFI_MODE_STA);
   WiFi.begin(ssid, password);
-  WiFi.config(IPAddress(192, 168, 1, 109), // change the last number to your assigned number
-              IPAddress(192, 168, 1, 1),
+  WiFi.config(IPAddress(192, 168, 78, 9), // change the last number to your assigned number
+              IPAddress(192, 168, 78, 1),
               IPAddress(255, 255, 255, 0));
   while(WiFi.status()!= WL_CONNECTED ) { 
     delay(500); Serial.print("."); 
