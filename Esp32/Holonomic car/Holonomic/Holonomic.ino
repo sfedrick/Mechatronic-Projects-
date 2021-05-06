@@ -55,8 +55,7 @@ int servoUpdateRate=1000; //update rate of servo in microseconds
 int tofUpdateRate=50000; //update rate of tof in microseconds
 int motorUpdateRate=100;//update rate of motor in microseconds
 int positionUpdateRate=100;//update rate at which we calculate position in microseconds
-int serverUpdateRate=50000; //update the server 
-
+int serverUpdateRate=5000; //update the server 
 float servolimit=0.15; // duty cycle of servo to usable range
 
 //Esp32 Status
@@ -66,33 +65,26 @@ float servolimit=0.15; // duty cycle of servo to usable range
  unsigned long MotorUpdate=micros();
  unsigned long PositionUpdate=micros();
  unsigned long ServerUpdate=micros();
- 
+ unsigned long recieveUpdate=micros();
  char AutonomousState[30]="False";
- int auton=0;
- int reset=0;
+
  int positionX=-1;
  int positionY=-1;
  int orientationTheta=-1;
  int TOF=-1;
  bool SensorFailure=true;
 
- //Esp32 recieved states
- int forward=0;
- int right=0;
- int clockwiserotate=0;
- int motorspeedPercent=0;
- int SensorState=0;
- int GripperState=0;
- int OnwallState=0;
 
  int w1=0;
  int w2=0;
  int w3=0; 
  int w4=0;
+ 
 
-
-
-
+ 
+ 
+// this is filled by scan variable
+int compass[5]={0};
 
 WiFiServer server(80);
 
@@ -134,26 +126,47 @@ void UpdatePosition(int dt){
   int speedStart=30;
   //motorspeedPercent;
 }
-//autonmous states
+
+
+ //Esp32 recieved states in order of get val
+  int auton=0;
+ int reset=0;
+ int forward=0;
+ int right=0;
+ int clockwiserotate=0;
+ int motorspeedPercent=0;
+ int SensorState=0;
+ int GripperState=0;
+ int OnwallState=0;
+ int ScanState=0;
+
+
+
  void RecieveState(){
+  
+  
   reset=getVal();
   auton=getVal();
+  
   forward=getVal();
   right=getVal();
   clockwiserotate=getVal();
+  
   motorspeedPercent=motorspeedPercent+getVal();
   //sensor state is backwards and i didn't feel like fixing the javascript
-  SensorState= SensorState-getVal();
+  SensorState= SensorState+getVal();
   GripperState=GripperState+getVal();
   OnwallState=getVal();
-  
+  ScanState=getVal();
+
+
   motorspeedPercent=Sconstrain(motorspeedPercent,50,100);
   SensorState=Sconstrain(SensorState,-50,50);
   GripperState=Sconstrain(GripperState,0,100);
   
   String Direction= "[ X:"+String(right*motorspeedPercent)+"; Y:"+String(forward*motorspeedPercent)+"; Rotation:"+String(clockwiserotate*motorspeedPercent)+"]";
   String Speed=String( motorspeedPercent);
-  String Sensor=String(SensorState);
+  String Sensor=String(-1*SensorState);
   String Gripper=String(GripperState);
   String s=Direction+","+Speed+","+Sensor+","+Gripper+",";
   sendplain(s);
@@ -163,7 +176,9 @@ void UpdatePosition(int dt){
 
 void CheckState(){
   String s=String(reset)+","+String(auton)+","+AutonomousState+","+String(positionX)+\
-  ","+String(positionY)+","+String(orientationTheta)+","+String(TOF)+",";
+  ","+String(positionY)+","+String(orientationTheta)+","+String(TOF)+","+\
+  String(compass[0])+","+String(compass[1])+","+String(compass[2])+","+String(compass[3])+","+String(compass[4])+","+String(compass[5])+","; 
+    
   sendplain(s);
   
 }
@@ -204,35 +219,6 @@ w4=Sconstrain(w4,-1,1);
 
 }
 
-void MotorTest(){
-   int duty=0;
-if(forward>0){
-    duty=map(motorspeedPercent,0,100,0,MotorResolution);
-    ledcWrite(MotorChannels[0], duty);  // write duty to LEDC 
-  
-}
-else if(forward<0){
-  
-  duty=map(motorspeedPercent,0,100,0,MotorResolution);
-    ledcWrite(MotorChannels[2], duty);  // write duty to LEDC 
-
-}
-else if (right<0){
-  duty=map(motorspeedPercent,0,100,0,MotorResolution);
-    ledcWrite(MotorChannels[1], duty);  // write duty to LEDC 
-}
-else if (right >0){
-  duty=map(motorspeedPercent,0,100,0,MotorResolution);
-    ledcWrite(MotorChannels[3], duty);  // write duty to LEDC 
-}
-else{
-duty=0;
-ledcWrite(MotorChannels[0], duty);  // write duty to LEDC 
-ledcWrite(MotorChannels[1], duty);  // write duty to LEDC 
-ledcWrite(MotorChannels[2], duty);  // write duty to LEDC 
-ledcWrite(MotorChannels[3], duty);  // write duty to LEDC 
-}
-}
 
 void SetServoDirection(int s, int servonumber){
   int duty=0;
@@ -255,20 +241,56 @@ void SetServoDirection(int s, int servonumber){
 //define end condition variable
 int onwall_init1=0;
 bool OnwallendCondition=false;
+
 bool onWallLoop(){
   if(onwall_init1>100){
+   
     return true;
     strcpy(AutonomousState,"finished");
   }
   else{
     strcpy(AutonomousState,"onwall state iteration");
+     delay(100);
   onwall_init1+=1;
    return false;}
   
 }
 
 
+//relevant scan variables
+int closeRange=0;
+int closedegree=0;
+String inyourface[15]="No Scan";
+int Scaninit=0;
+int Scanlength=101;
+int ScanSize=1; // scan at every degree of the servo
+bool Scaned=false;
+bool Scanendcondition=false;
+int ScanArray[101]={0}; // made 101 so 50 is the middle element
+//Scan loop takes in the beginning and end of scan range will be useful for wall following
+//int b must be less than or equal to the size of the array which is 101 
+// int a must be greater than or equal to zero
 
+bool ScanLoop(int a,int b,int index){
+  if((index+a)<b){
+   SensorState=map(index+a,0,Scanlength-1,50,-50);
+   SetServoDirection(SensorState,0);
+   delay(2);
+   if((index+a)%ScanSize==0 || (index+a)%25==0){
+    //check if it's a valid min value
+     TOF = rangeToF();
+     delay(50);
+     ScanArray[index+a]=TOF;}
+   else{
+    ScanArray[index+a]=-1;
+   }
+   return false;
+  }
+  else{
+    return true;
+  }
+  
+}
 
 
 
@@ -284,7 +306,7 @@ void setup() {
     }
     delay(2000);
     if(failureCount>3){
-      ESP.restart();
+      //ESP.restart();
       Serial.println("Sensor not found restarting"); 
     }
  Serial.println("Sensor not found"); 
@@ -340,7 +362,7 @@ for(snum=0;snum<2;snum=snum+1){
 }
 
 
-
+bool Endit;
 void loop() {
   // put your main code here, to run repeatedly:
 StartTime=micros();
@@ -351,44 +373,83 @@ if(StartTime-ServerUpdate>serverUpdateRate){
   serve(server, body);
 
 }
+
 //autonomous state onwall  
-  while(OnwallState==1 && reset!=1 && !OnwallendCondition){
+  while(OnwallState==1 && reset!=1){
       serve(server, body);
     //perform on wall state autonomous loop  
-      bool Endit=onWallLoop();
+      OnwallendCondition=onWallLoop();
     //end condition
-       if(Endit){
+       if(OnwallendCondition){
         reset=1;
        }
     }
     if(OnwallState==0){
       //reset initial conditions
        onwall_init1=0;
+       OnwallendCondition=false;
     }
+
+ //autonomous state Scan can 
+ while(ScanState==1 && reset!=1){
+  serve(server, body);
+  Scanendcondition=ScanLoop(0,101,Scaninit);//scan full range of 101 element array 
+  Scaninit+=1;
+  if(Scanendcondition){
+      //reset initial conditions
+      compass[0]=ScanArray[0]; 
+      compass[1]=ScanArray[25];
+      compass[2]=ScanArray[50];
+      compass[3]=ScanArray[75];
+      compass[4]=ScanArray[100];
+      SensorState=0;
+      Serial.println("West");
+      Serial.println(compass[0]);
+      Serial.println("NorthWest");
+      Serial.println(compass[1]);
+      Serial.println("North");
+      Serial.println(compass[2]);
+      Serial.println("NorthEast");
+      Serial.println(compass[3]);
+      Serial.println("East");
+      Serial.println(compass[4]);
+       reset=1;
+    }
+ }
+ if(ScanState==0){
+   closeRange=0;
+   closedegree=0;
+   inyourface[15]="No Scan";
+   Scaninit=0;
+   Scaned=false;
+   Scanendcondition=false;
+   Endit=false;
+ }
 
  if(auton!=1){
   //perform manual actions
-  strcpy(AutonomousState,"Manual Mode");
- 
- }
+      strcpy(AutonomousState,"Manual Mode");
+      setMotorDirection();
+    if(StartTime-MotorUpdate>motorUpdateRate){
+        MotorUpdate=micros();
+        SetMotorSpeed(motorspeedPercent*w1, 0);
+        SetMotorSpeed(motorspeedPercent*w2, 1);
+        SetMotorSpeed(motorspeedPercent*w3, 2);
+        SetMotorSpeed(motorspeedPercent*w4, 3); }
+    
+    if(StartTime-ServoUpdate>servoUpdateRate){
+      ServoUpdate=micros();
+      SetServoDirection(SensorState,0);
+       SetServoDirection(GripperState,1);
+    }
+    
+    if(StartTime-TOFUpdate>tofUpdateRate){
+      TOFUpdate=micros();
+      TOF = rangeToF();
+     
+     }
 
-   setMotorDirection();
-if(StartTime-MotorUpdate>motorUpdateRate){
-    MotorUpdate=micros();
-    SetMotorSpeed(motorspeedPercent*w1, 0);
-    SetMotorSpeed(motorspeedPercent*w2, 1);
-    SetMotorSpeed(motorspeedPercent*w3, 2);
-    SetMotorSpeed(motorspeedPercent*w4, 3); }
-
-if(StartTime-ServoUpdate>servoUpdateRate){
-  ServoUpdate=micros();
-  SetServoDirection(SensorState,0);
-   SetServoDirection(GripperState,1);
-}
-
-if(StartTime-TOFUpdate>tofUpdateRate){
-  TOFUpdate=micros();
-  TOF = rangeToF();
+   
 }
 
 

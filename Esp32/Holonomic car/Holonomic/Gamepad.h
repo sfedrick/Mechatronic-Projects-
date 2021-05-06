@@ -71,6 +71,11 @@ left:5%;
     Orientation:<span id="Orientation"> Theta </span><br>
     Direction:<span id="MotorDirection"> [x,y,rotate] </span><br>
     Motor Speed:<span id="MotorSpeed"> Motor Speed </span><br>
+    Left:<span id="LeftLoc"> Left </span><br>
+    FL:<span id="FlLoc"> Forward Left </span><br>
+    Forward:<span id="ForwardLoc"> Forward</span><br>
+    FR:<span id="FrLoc"> Forward right</span><br>
+    Right:<span id="RightLoc"> right </span><br>
 
   </div>
 
@@ -79,7 +84,10 @@ left:5%;
   Sensor Direction:<span id="ServoSensor"> Theta </span><br>
   Servo Gripper:<span id="Servogripper"> Theta </span><br>
   Autonomous:<span id="Autonomy"> True/False</span><br>
-  InUrFace:<span id="InUrFace"> True/False</span><br>
+  AI Message:<span id="AutonomyMessage"> True/False</span><br>
+  InUrFace:<span id="InUrFace"> can, wall, (FL,FR)</span><br>
+  ClosestRange:<span id="CloseRange"> From Scan</span><br>
+  ClosestServo:<span id="CloseDegree"> From Scan</span><br>
   </div>
 
     <div class="space">Movement</div><br>
@@ -112,7 +120,7 @@ left:5%;
   <button class="button" type="button" onclick="setloc2()" id="setlocation2"> [X] Set Location 2  </button>
   <button class="button" type="button" onclick="goloc1()" id="golocation1">[1] go to location 1 </button>
   <button class="button" type="button" onclick="goloc2()" id="golocation2">[2] go to location 2  </button>
-  <button class="button" type="button" onclick="scancan()" id="resethome">[-]reset Home</button>
+  <button class="button" type="button" onclick="resethome()" id="resethomebutton">[-]reset Home</button>
   <button class="button" type="button" onclick="gohome()" id="homebutton"> [0] Go Home</button>
    <button class="button" type="button" onclick="reset()" id="resetbutton"> [R] RESET</button><br>
 
@@ -133,7 +141,7 @@ var Gripperstate=0;
 //autonomous states
 var auton=0;
 var Onwallstate=0;
-
+var Scanstate=0;
 
 var esp32message=[];
 var esp32Status=[];
@@ -156,7 +164,7 @@ var keyboardCode = function(event) {
 };
 
 
-setInterval(updateState, 200); 
+setInterval(updateState, 500); 
 function updateState(){
   sendState();
   checkState();
@@ -209,12 +217,12 @@ function keyDownHandler(event) {
     }
 
      if(code == 37 || code == "ArrowLeft") { // arrow left key 
-      Sensorservostate= -1;
+      Sensorservostate= 1;
       document.getElementById("sensorleft").style = "background-color:lime";
     }
 
      if(code == 39 || code == "ArrowRight") { // arrow right key 
-      Sensorservostate= 1;
+      Sensorservostate= -1;
       document.getElementById("sensorright").style = "background-color:lime";
     }
 
@@ -228,25 +236,27 @@ function keyDownHandler(event) {
       document.getElementById("closebutton").style = "background-color:lime";
     }
 
+    //autonomous functions
+
      if(code == 89 || code == "y") { // y key 
       Onwallstate= 1;
       auton=1;
       document.getElementById("onWallbutton").style = "background-color:lime";
     }
-
+    
+  
+     if(code == 79 || code == "o") { // o key 
+      Scanstate= 1;
+      auton=1;
+      document.getElementById("scanbutton").style = "background-color:lime";
+    }
 /*
 
      <button class="button" type="button" onclick="wallfollow()" id="wallfollowbutton">[U]Wall follow</button>
   <button class="button" type="button" onclick="offwall()" id="offwallbutton">[I]Get off Wall</button>
   <button class="button" type="button" onclick="circletrace()" id="circletracebutton">[P]Circle Trace</button>
-    <button class="button" type="button" onclick="scancan()" id="scanbutton">[O]Scan</button><br>
 
 */
-
-
-
-
-
 
 
     
@@ -339,7 +349,7 @@ function sendState() {
     var xhttp = new XMLHttpRequest(); 
     //sets the url that we use to get the attach handler
     var str="Orders?val=";
-    var res=str.concat(reset,",",auton,",",forwardstate,",",rightstate,",",rotatestate,",",motorspeedstate,",",Sensorservostate,",",Gripperstate,",",Onwallstate);
+    var res=str.concat(reset,",",auton,",",forwardstate,",",rightstate,",",rotatestate,",",motorspeedstate,",",Sensorservostate,",",Gripperstate,",",Onwallstate,",",Scanstate);
     xhttp.onreadystatechange = function() {
         if (this.status == 200 && this.readyState == 4) {
   //whatever you send as plain text or html in the function attached to the Orders?val=  attach handler gets displayed here 
@@ -377,6 +387,12 @@ function checkState() {
         document.getElementById("PositionY").innerHTML = esp32Status[4]; 
         document.getElementById("Orientation").innerHTML = esp32Status[5]; 
         document.getElementById("TOFreading").innerHTML = esp32Status[6]; 
+        document.getElementById("LeftLoc").innerHTML = esp32Status[7]; 
+        document.getElementById("FlLoc").innerHTML = esp32Status[8]; 
+        document.getElementById("ForwardLoc").innerHTML = esp32Status[9]; 
+        document.getElementById("FrLoc").innerHTML = esp32Status[10]; 
+        document.getElementById("RightLoc").innerHTML = esp32Status[11]; 
+        
         }    
     };
     xhttp.open("GET", res, true);
