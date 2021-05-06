@@ -1,3 +1,7 @@
+//html
+const char body[] PROGMEM = R"===( 
+
+
 <!DOCTYPE html>
 <html>
 
@@ -288,9 +292,15 @@ function keyDownHandler(event) {
 
 
      if(code == 79 || code == "o") { // o key
-      Scanstate= 1;
-      auton=1;
-      document.getElementById("scanbutton").style = "background-color:lime";
+      if(Scanstate==0){
+         Scanstate= 1;
+         document.getElementById("scanbutton").style = "background-color:lime";
+      }
+     else if(Scanstate==1){
+      Scanstate= 0;
+       document.getElementById("scanbutton").style = "background-color:#008CBA";
+     }
+      
     }
 /*
 
@@ -429,11 +439,6 @@ function checkState() {
         document.getElementById("PositionY").innerHTML = esp32Status[4];
         document.getElementById("Orientation").innerHTML = esp32Status[5];
         document.getElementById("TOFreading").innerHTML = esp32Status[6];
-        document.getElementById("LeftLoc").innerHTML = esp32Status[7];
-        document.getElementById("FlLoc").innerHTML = esp32Status[8];
-        document.getElementById("ForwardLoc").innerHTML = esp32Status[9];
-        document.getElementById("FrLoc").innerHTML = esp32Status[10];
-        document.getElementById("RightLoc").innerHTML = esp32Status[11];
 
         }
     };
@@ -447,5 +452,6 @@ function checkState() {
 
 </script>
 
-
+</body>
 </html>
+)===";
