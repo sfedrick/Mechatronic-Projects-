@@ -287,11 +287,7 @@ void setMotorDirection(int y, int x ,int cw) {
 
 }
 
-//recode servo
-void SetServoDirection(int s, int servonumber) {
 
-
-}
 
 
 
@@ -309,7 +305,7 @@ bool onWallLoop() {
   }
   else {
     strcpy(AutonomousState, "onwall state iteration");
-    delay(100);
+    delay(10);
     onwall_init1 += 1;
     return false;
   }
@@ -321,19 +317,33 @@ bool onWallLoop() {
 int rotate_init = 0;
 bool RotateEnd90 = false;
 
+
+
 bool RotateLoop(int rotateDir) {
-  if (rotate_init > 100) {
-    return true;
-    strcpy(AutonomousState, "finished rotate");
+  if(rotate_init==0){
+      strcpy(AutonomousState, "running");
+      delay(100);
+      setMotorDirection(0,0,CWRotate90);
+      SetMotorSpeed(100* w1, 0);
+      SetMotorSpeed(100* w2, 1);
+      SetMotorSpeed(100* w3, 2);
+      SetMotorSpeed(100* w4, 3);
+      rotate_init += 1;
+      delay(250);
+      setMotorDirection(0,0,0);
+      SetMotorSpeed(0, 0);
+      SetMotorSpeed(0, 1);
+      SetMotorSpeed(0, 2);
+      SetMotorSpeed(0, 3);
+      rotate_init=1;
+      return true;
   }
-  else {
-    strcpy(AutonomousState, "onwall state iteration");
-    delay(100);
-    rotate_init += 1;
-    return false;
+  else{
+      return true;
+      strcpy(AutonomousState, "Prevented Double Tap");
+  }
   }
 
-}
 
 
 
@@ -440,6 +450,7 @@ void loop() {
     //perform on wall state autonomous loop
     OnwallendCondition = onWallLoop();
     //end condition
+   
     if (OnwallendCondition) {
       reset = 1;
     }
@@ -450,13 +461,15 @@ void loop() {
     OnwallendCondition = false;
   }
 
-  while(CWRotate90!= 0 && reset != 1) {
+  while((CWRotate90== 1 || CWRotate90== -1) && reset != 1) {
     serve(server, body);
     //perform rotate 
     //end condition
     RotateEnd90=RotateLoop(CWRotate90);
+
     if (RotateEnd90) {
       reset = 1;
+      serve(server, body);
     }
   }
   if (CWRotate90 == 0) {
