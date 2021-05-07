@@ -26,6 +26,7 @@
 
 #define TOF_ready 12
 #define TOF_on 13
+#define XSHUT_TOF 10
 
 
 #include "Adafruit_VL53L0X.h"
@@ -65,7 +66,7 @@ int TOF = -1;
 bool SensorFailure = true;
 bool ResetServo = false;
 int ChangeSensor;
-
+int ChangeGripper;
 int w1 = 0;
 int w2 = 0;
 int w3 = 0;
@@ -227,7 +228,7 @@ void RecieveState() {
 
   motorspeedPercent = Sconstrain(motorspeedPercent, 0, 100);
   SensorState = Sconstrain(SensorState, -50, 50);
-  GripperState = Sconstrain(GripperState, 0, 180);
+  GripperState = Sconstrain(GripperState, 0, 100);
 
   String Direction = "[ X:" + String(right * motorspeedPercent) + "; Y:" + String(forward * motorspeedPercent) + "; Rotation:" + String(clockwiserotate * motorspeedPercent) + "]";
   String Speed = String( motorspeedPercent);
@@ -320,6 +321,8 @@ void setup() {
   Serial.begin(115200);
   int failureCount = 0;
 
+   pinMode(XSHUT_TOF, OUTPUT);
+  digitalWrite(XSHUT_TOF,HIGH);
   while (SensorFailure && !lox.begin(0x53) && failureCount < 3) {
     failureCount += 1;
     if (lox.begin(0x53)) {
@@ -332,7 +335,7 @@ void setup() {
     }
     Serial.println("Sensor not found");
   }
-
+  
   WiFi.mode(WIFI_MODE_STA);
   WiFi.begin(ssid, password);
   WiFi.config(IPAddress(192, 168, 1, 109),
@@ -391,6 +394,12 @@ void setup() {
 
 bool Endit;
 void loop() {
+  if(reset==1){
+    digitalWrite(XSHUT_TOF,LOW);
+    delay(10);
+     digitalWrite(XSHUT_TOF,HIGH);
+     ESP.restart();
+  }
 
   // put your main code here, to run repeatedly:
   static uint32_t lastScan = micros();
@@ -437,6 +446,8 @@ void loop() {
       //remake servos
       ChangeSensor = map(SensorState, -50, 50, FULLBACK, FULLFRONT);
       ledcAnalogWrite(LEDC_CHANNEL, ChangeSensor, LEDC_RESOLUTION);
+      ChangeGripper=map(GripperState, 0, 100, FULLBACK, FULLFRONT);
+      ledcAnalogWrite(LEDC_CHANNEL2, ChangeGripper, LEDC_RESOLUTION);
     }
     if (StartTime - TOFUpdate > tofUpdateRate && ScanState == 0) {
       TOFUpdate = StartTime;
