@@ -188,7 +188,7 @@ var Gripperstate=0;
 var auton=0;
 var Onwallstate=0;
 var Scanstate=0;
-
+var ScanInterval;
 var esp32message=[];
 var esp32Status=[];
 
@@ -294,21 +294,19 @@ function keyDownHandler(event) {
      if(code == 79 || code == "o") { // o key
       if(Scanstate==0){
          Scanstate= 1;
+         ScanInterval=setInterval(getData, 1000);
          document.getElementById("scanbutton").style = "background-color:lime";
       }
      else if(Scanstate==1){
+       clearInterval(ScanInterval);
       Scanstate= 0;
        document.getElementById("scanbutton").style = "background-color:#008CBA";
+      
      }
+     
       
     }
-/*
 
-     <button class="button" type="button" onclick="wallfollow()" id="wallfollowbutton">[U]Wall follow</button>
-  <button class="button" type="button" onclick="offwall()" id="offwallbutton">[I]Get off Wall</button>
-  <button class="button" type="button" onclick="circletrace()" id="circletracebutton">[P]Circle Trace</button>
-
-*/
 
 
 
@@ -445,6 +443,95 @@ function checkState() {
     xhttp.open("GET", res, true);
     xhttp.send();
   }
+
+
+//Scan map javascript from Mark Yim
+// Display Elements
+var c = document.getElementById("myCanvas");
+var ctx = c.getContext("2d");
+ctx.font="14px Arial";
+
+var ch = [];
+var scansize=45;
+var zoom = 8;
+
+
+
+function zoomf() {
+  if (zoom == 8) zoom = 2;
+  else zoom = 8;
+  getData();
+}
+
+function drawScreen() {
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.strokeStyle = "#008800";
+  ctx.beginPath();
+  ctx.setLineDash([1, 5]);
+
+  // draw distance lines
+  for (let i=1; i < 8; i++) {
+    ctx.moveTo(0, i * 50);
+    ctx.lineTo(c.width, i * 50);  
+    ctx.fillText(String((8-i)*50*zoom)+" mm",20,i*50);
+  }
+  ctx.stroke();
+  
+  // draw origin (robot as circle)
+  ctx.beginPath();
+  ctx.arc(c.width/2, c.height-2, 30/zoom, 0, 2 * Math.PI, false);
+  ctx.fill();
+  ctx.stroke();
+}
+
+function getData() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200 ) { 
+      updateGraph(this);
+    }
+  };
+  xhttp.open("GET", "up", true);
+  xhttp.send();
+}
+
+function radius(i){return ch[i+1]; }
+
+function theta(i){ return ch[i+1+scansize]*Math.PI/180; }
+
+function x(i){     return radius(i)*Math.cos(theta(i))/zoom; }
+
+function y(i){     return radius(i)*Math.sin(theta(i))/zoom; }
+
+function drawDataCircles() {
+  ctx.setLineDash([]);
+  for (let i=0; i < scansize; i++) {
+    ctx.beginPath();
+    ctx.arc(c.width/2 + y(i), c.height - x(i),
+            radius(i)/80, 0, 2*Math.PI);
+    ctx.stroke();
+  }
+}
+
+function updateGraph(xhttp) {
+      scansize = parseInt(xhttp.responseText); // get 1st value
+      drawScreen(); 
+      
+      // draw old data in light green
+      ctx.strokeStyle = "#88FF88"; 
+      drawDataCircles();
+      
+      // draw new data in dark green
+      ch = xhttp.responseText.split(","); // get ranging data
+      ctx.strokeStyle = "#008800";
+      drawDataCircles();
+//  debug.innerHTML = ch; // debugging print
+}
+
+
+
+
+
 
 
 

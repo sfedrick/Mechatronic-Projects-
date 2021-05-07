@@ -11,30 +11,22 @@
 #define MotorChannel3 7
 #define MotorChannel4 6
 
-#define SERVOPIN1    4
-#define SERVOPIN2    0
 
-#define SERVOCHANNEL1 2
-#define SERVOCHANNEL2 1
 
 #define MotorDirection1 9
 #define MotorDirection2 26
 #define MotorDirection3 27
 #define MotorDirection4 14
 
-#define MotorFrequency 5000
-#define MotorResolutionBits 8
-#define MotorResolution 255 // this is 2^MotorResolutionBits -1
+#define MotorFrequency 10000
+#define MotorResolutionBits 14
+#define MotorResolution ((1<<MotorResolutionBits)-1)  // this is 2^MotorResolutionBits -1
 #define Touch1 33
 #define Touch2 33
 
 #define TOF_ready 12
 #define TOF_on 13
 
-
-#define SERVOFREQ    50
-#define ServoResolutionBits 8
-#define ServoResolution 255 
 
 #include "Adafruit_VL53L0X.h"
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
@@ -43,8 +35,6 @@ int MotorSpeeds[4]={ MotorSpeed1, MotorSpeed2, MotorSpeed3,MotorSpeed4};
 int MotorDirections[4]={MotorDirection1,MotorDirection2,MotorDirection3,MotorDirection4};
 int MotorChannels[4]={MotorChannel1,MotorChannel2,MotorChannel3,MotorChannel4};
 
-int ServoPins[2]={SERVOPIN1,SERVOPIN2};
-int ServoChannels[2]={SERVOCHANNEL1,SERVOCHANNEL2};
 
 const char* ssid     = "Fios-G8WhZ";
 const char* password = "Jesuisungrenouille777";
@@ -80,11 +70,78 @@ float servolimit=0.15; // duty cycle of servo to usable range
  int w3=0; 
  int w4=0;
  
+//scanning code from MarkYim
+#define LEDC_CHANNEL       2 // use first channel of 16  
+#define LEDC_RESOLUTION_BITS  14
+#define LEDC_RESOLUTION  ((1<<LEDC_RESOLUTION_BITS)-1) 
+#define LEDC_FREQ_HZ     60
+#define SERVO_PIN        4
+#define SERVO_SCAN       12   // can increase this to have wider sweep
+
+#define SERVO_PIN2   0
+#define LEDC_CHANNEL2 1
+
+
+#define FULLBACK  LEDC_RESOLUTION*(15-SERVO_SCAN)*60/10000 
+#define SERVOOFF  LEDC_RESOLUTION*15*60/10000   // center servo (1.5ms pulse)
+#define FULLFRONT LEDC_RESOLUTION*(15+SERVO_SCAN)*60/10000
+#define SERVOTODEG(x) ((x)*(int8_t)90*10000)/(12*LEDC_RESOLUTION*60)
 
  
- 
-// this is filled by scan variable
-int compass[5]={0};
+void ledcAnalogWrite(uint8_t channel, uint32_t value, uint32_t valueMax = 255) {            
+  uint32_t duty =  LEDC_RESOLUTION * min(value, valueMax) / valueMax;   
+  ledcWrite(channel, duty);  // write duty to LEDC 
+}
+
+//****************************
+//********* Scanning stuff:
+//****************************
+#define SAMPLEFREQ 100   // TOF can use 30, Ultrasonic maybe 15
+#define SCANSPEED 40
+#define SCANSIZE 45
+#define ARRAYMAX SCANSIZE*2 // needs to be bigger than scansize
+int scanR[ARRAYMAX];
+int scanA[ARRAYMAX];
+int scanoffset = SCANSIZE; // start at SCANSIZE so we don't endup negative mod
+
+
+
+void scanStep(int range) {
+  static int angle;
+  static int dir=SCANSPEED;
+  
+  if (angle+SERVOOFF > FULLFRONT) {
+    dir = -SCANSPEED;
+  }
+  if (angle+SERVOOFF < FULLBACK) {
+    dir = SCANSPEED;    
+//    printScan();
+  }
+  scanR[scanoffset % ARRAYMAX] = range;
+  scanA[scanoffset % ARRAYMAX] = -SERVOTODEG(angle);
+  scanoffset++;
+  angle += dir;
+  ledcAnalogWrite(LEDC_CHANNEL, SERVOOFF+angle, LEDC_RESOLUTION);
+
+}
+
+//attach handler for scanning
+void handleUpdate() {
+  String s = "";
+
+  s = s+SCANSIZE;                  // first number is number of data pairs
+  for (int i=0; i<SCANSIZE; i++) { // add range values
+    s = s+","+ scanR[(scanoffset-i) % ARRAYMAX]; // range sensor lags angle by 1 step
+  }
+  for (int i=0; i<SCANSIZE; i++) { // add angle value
+    s = s+","+ scanA[(scanoffset-i-1) % ARRAYMAX];
+  }
+  
+  sendplain(s);
+}
+
+
+
 
 WiFiServer server(80);
 
@@ -160,9 +217,9 @@ void UpdatePosition(int dt){
   ScanState=getVal();
 
 
-  motorspeedPercent=Sconstrain(motorspeedPercent,50,100);
-  SensorState=Sconstrain(SensorState,-50,50);
-  GripperState=Sconstrain(GripperState,0,100);
+  motorspeedPercent=Sconstrain(motorspeedPercent,0,100);
+  SensorState=Sconstrain(SensorState,0,180);
+  GripperState=Sconstrain(GripperState,0,180);
   
   String Direction= "[ X:"+String(right*motorspeedPercent)+"; Y:"+String(forward*motorspeedPercent)+"; Rotation:"+String(clockwiserotate*motorspeedPercent)+"]";
   String Speed=String( motorspeedPercent);
@@ -194,8 +251,8 @@ void SetMotorSpeed(int m, int motornumber){
   }
    
   
-  ledcWrite(MotorChannels[motornumber], duty);  // write duty to LEDC 
-  
+ // ledcWrite(MotorChannels[motornumber], duty);  // write duty to LEDC 
+  ledcAnalogWrite(MotorChannels[motornumber], duty,MotorResolution);
 }
 
 
@@ -218,17 +275,8 @@ w4=Sconstrain(w4,-1,1);
 
 }
 
-
+//recode servo
 void SetServoDirection(int s, int servonumber){
-  int duty=0;
-  int limit=servolimit*float(ServoResolution);
-  if(servonumber<1){
-  duty=map(s,-50,50,0,limit);
-  }
-  else{
-  duty=map(s,0,100,0,limit);
-  }
-  ledcWrite(ServoChannels[servonumber], duty);  // write duty to LEDC 
  
   
 }
@@ -307,21 +355,27 @@ for(mnum=0;mnum<4;mnum=mnum+1){
   ledcSetup(MotorChannels[mnum], MotorFrequency, MotorResolutionBits);
 }
 //set up servos
-int ServoPins[2]={SERVOPIN1,SERVOPIN2};
-int ServoChannels[2]={SERVOCHANNEL1,SERVOCHANNEL2};
-int snum;
-for(snum=0;snum<2;snum=snum+1){ 
-  //motor pins
-  pinMode(ServoPins[snum], OUTPUT);
-  ledcAttachPin(ServoPins[snum], ServoChannels[snum]);
-  ledcSetup(ServoChannels[snum], SERVOFREQ, ServoResolutionBits);
-}
+
+//set up sensor servor 
+  ledcSetup(LEDC_CHANNEL, 60, LEDC_RESOLUTION_BITS); // channel, freq, bits
+  ledcAttachPin(SERVO_PIN, LEDC_CHANNEL);
+  ledcAnalogWrite(LEDC_CHANNEL, SERVOOFF, LEDC_RESOLUTION); 
+
+//set up gripper servo
+ledcSetup(LEDC_CHANNEL2, 60, LEDC_RESOLUTION_BITS); // channel, freq, bits
+  ledcAttachPin(SERVO_PIN2, LEDC_CHANNEL2);
+  ledcAnalogWrite(LEDC_CHANNEL2, SERVOOFF, LEDC_RESOLUTION); 
+
+
+
 
  //states of holonomic car
   
   attachHandler("/Orders?val=",RecieveState);
   attachHandler("/Check?val=",CheckState);
+   attachHandler("/up",handleUpdate);
   attachHandler("/ ",handleRoot);
+  
 
 }
 
@@ -329,6 +383,7 @@ for(snum=0;snum<2;snum=snum+1){
 bool Endit;
 void loop() {
   // put your main code here, to run repeatedly:
+static uint32_t lastScan = micros();
 StartTime=micros();
 
     
@@ -368,14 +423,19 @@ if(StartTime-ServerUpdate>serverUpdateRate){
     
     if(StartTime-ServoUpdate>servoUpdateRate){
       ServoUpdate=StartTime;
-      SetServoDirection(SensorState,0);
-       SetServoDirection(GripperState,1);
+     //remake servos
     }
-    if(StartTime-TOFUpdate>tofUpdateRate){
+    if(StartTime-TOFUpdate>tofUpdateRate && ScanState==0){
       TOFUpdate=StartTime;
       TOF = rangeToF();
      
      }
+
+  if (StartTime-lastScan > 1000000/SAMPLEFREQ && ScanState==1) { // update the servo position
+    TOF = rangeToF();     // uncomment if using ToF sensor
+    scanStep(TOF);
+    lastScan = StartTime;
+  }
 
    
 }
