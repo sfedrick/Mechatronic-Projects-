@@ -64,7 +64,7 @@ int positionY = -1;
 int orientationTheta = -1;
 int TOF = -1;
 bool SensorFailure = true;
-bool ResetServo = false;
+
 int ChangeSensor;
 int ChangeGripper;
 int w1 = 0;
@@ -197,6 +197,7 @@ void UpdatePosition(int dt) {
 //Esp32 recieved states in order of get val
 int auton = 0;
 int reset = 0;
+int hardreset=0;
 int forward = 0;
 int right = 0;
 int clockwiserotate = 0;
@@ -205,12 +206,13 @@ int SensorState = 0;
 int GripperState = 0;
 int OnwallState = 0;
 int ScanState = 0;
+int CWRotate90=0;
 
 
 
 void RecieveState() {
 
-
+  hardreset=getVal();
   reset = getVal();
   auton = getVal();
 
@@ -224,6 +226,7 @@ void RecieveState() {
   GripperState = GripperState + getVal();
   OnwallState = getVal();
   ScanState = getVal();
+  CWRotate90=getVal();
 
 
   motorspeedPercent = Sconstrain(motorspeedPercent, 0, 100);
@@ -231,8 +234,9 @@ void RecieveState() {
   GripperState = Sconstrain(GripperState, 0, 100);
 
   String Direction = "[ X:" + String(right * motorspeedPercent) + "; Y:" + String(forward * motorspeedPercent) + "; Rotation:" + String(clockwiserotate * motorspeedPercent) + "]";
+  //align it at zero
   String Speed = String( motorspeedPercent);
-  String Sensor = String(SensorState);
+  String Sensor = String((-1*SensorState)+6);
   String Gripper = String(GripperState);
   String s = Direction + "," + Speed + "," + Sensor + "," + Gripper + ",";
   sendplain(s);
@@ -266,11 +270,10 @@ void SetMotorSpeed(int m, int motornumber) {
 
 
 
-
-void setMotorDirection() {
-  int vx = forward;
-  int vy = right;
-  int w = -clockwiserotate;
+void setMotorDirection(int y, int x ,int cw) {
+  int vx = y;
+  int vy = x;
+  int w = -cw;
 
   w1 = (vx + vy - w);
   w2 = (vx - vy + w);
@@ -313,6 +316,24 @@ bool onWallLoop() {
 
 }
 
+
+//
+int rotate_init = 0;
+bool RotateEnd90 = false;
+
+bool RotateLoop(int rotateDir) {
+  if (rotate_init > 100) {
+    return true;
+    strcpy(AutonomousState, "finished rotate");
+  }
+  else {
+    strcpy(AutonomousState, "onwall state iteration");
+    delay(100);
+    rotate_init += 1;
+    return false;
+  }
+
+}
 
 
 
@@ -391,10 +412,11 @@ void setup() {
 
 }
 
-
+//reinitialize antonomous functions
 bool Endit;
+bool ResetServo = false;
 void loop() {
-  if(reset==1){
+  if(hardreset){
     digitalWrite(XSHUT_TOF,LOW);
     delay(10);
      digitalWrite(XSHUT_TOF,HIGH);
@@ -428,11 +450,27 @@ void loop() {
     OnwallendCondition = false;
   }
 
+  while(CWRotate90!= 0 && reset != 1) {
+    serve(server, body);
+    //perform rotate 
+    //end condition
+    RotateEnd90=RotateLoop(CWRotate90);
+    if (RotateEnd90) {
+      reset = 1;
+    }
+  }
+  if (CWRotate90 == 0) {
+    //reset initial conditions
+    rotate_init = 0;
+    RotateEnd90 = false;
+  }
+
 
   if (auton != 1) {
     //perform manual actions
     strcpy(AutonomousState, "Manual Mode");
-    setMotorDirection();
+    
+    setMotorDirection(forward,right,clockwiserotate);
     if (StartTime - MotorUpdate > motorUpdateRate) {
       MotorUpdate = StartTime;
       SetMotorSpeed(motorspeedPercent * w1, 0);

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html>
 
 <style>
@@ -152,11 +152,11 @@ right:2.5%;
   <button class="buttonBot" type="button" onclick="motorslowdownbutton" id="motorslowdownbutton">[down] Slow down</button>
 
   <div class="space2">Autonomous functions </div> <br>
+  <button class="button" type="button" onclick="scancan()" id="scanbutton">[O]Scan</button>
+   <button class="button" type="button" onclick="ccwturn()" id="ccwturnbutton">[I]-90 degree turn</button>
+  <button class="button" type="button" onclick="cwturn()" id="cwturnbutton">[P]+90 degree turn</button>
   <button class="button" type="button" onclick="onWall()" id="onWallbutton">[Y]Get on wall</button>
   <button class="button" type="button" onclick="wallfollow()" id="wallfollowbutton">[U]Wall follow</button>
-  <button class="button" type="button" onclick="ccwturn()" id="ccwturnbutton">[I]-90 degree turn</button>
-  <button class="button" type="button" onclick="cwturn()" id="cwturnbutton">[P]+90 degree turn</button>
-  <button class="button" type="button" onclick="scancan()" id="scanbutton">[O]Scan</button>
   <button class="button" type="button" onclick="caref" id="carefulfoward">[H]Foward</button>
   <button class="button" type="button" onclick="GrabCan" id="GrabCanButton">[H]GrabCan</button>
 
@@ -184,16 +184,16 @@ var Gripperstate=0;
 var auton=0;
 var Onwallstate=0;
 var Scanstate=0;
+var ScanInterval;
+var Wallfollowstate=0;
+var CWturnState=0;
+
 
 var esp32message=[];
 var esp32Status=[];
 
 
 sendState();
-
-
-
-
 
 
 
@@ -288,21 +288,34 @@ function keyDownHandler(event) {
 
 
      if(code == 79 || code == "o") { // o key
-      Scanstate= 1;
+      if(Scanstate==0){
+         Scanstate= 1;
+         ScanInterval=setInterval(getData, 1000);
+         document.getElementById("scanbutton").style = "background-color:lime";
+      }
+     else if(Scanstate==1){
+       clearInterval(ScanInterval);
+      Scanstate= 0;
+       document.getElementById("scanbutton").style = "background-color:#008CBA";
+
+     }
+     }
+
+      if(code == 80 || code == "p") { // p key
+      CWturnState=1;
       auton=1;
-      document.getElementById("scanbutton").style = "background-color:lime";
+      document.getElementById("cwturnbutton").style = "background-color:lime";
     }
-/*
-
-     <button class="button" type="button" onclick="wallfollow()" id="wallfollowbutton">[U]Wall follow</button>
-  <button class="button" type="button" onclick="offwall()" id="offwallbutton">[I]Get off Wall</button>
-  <button class="button" type="button" onclick="circletrace()" id="circletracebutton">[P]Circle Trace</button>
-
-*/
+     if(code == 73 || code == "i") { // i key
+      CWturnState=-1;
+      auton=1;
+      document.getElementById("ccwturnbutton").style = "background-color:lime";
+    }
 
 
 
- }
+
+    }
 
   if(code == 82 || code == "r") { // k key
       reset= 1;
@@ -391,11 +404,11 @@ function sendState() {
     var xhttp = new XMLHttpRequest();
     //sets the url that we use to get the attach handler
     var str="Orders?val=";
-    var res=str.concat(reset,",",auton,",",forwardstate,",",rightstate,",",rotatestate,",",motorspeedstate,",",Sensorservostate,",",Gripperstate,",",Onwallstate,",",Scanstate);
+    var res=str.concat(reset,",",auton,",",forwardstate,",",rightstate,",",rotatestate,",",motorspeedstate,",",Sensorservostate,",",Gripperstate,",",Onwallstate,",",Scanstate,",",CWturnState);
     xhttp.onreadystatechange = function() {
         if (this.status == 200 && this.readyState == 4) {
   //whatever you send as plain text or html in the function attached to the Orders?val=  attach handler gets displayed here
-  //we split that plain text using commas
+  //we split that plain text using comma,
         esp32message=this.responseText.split(",");
         document.getElementById("MotorDirection").innerHTML = esp32message[0];
         document.getElementById("MotorSpeed").innerHTML = esp32message[1];
@@ -429,11 +442,6 @@ function checkState() {
         document.getElementById("PositionY").innerHTML = esp32Status[4];
         document.getElementById("Orientation").innerHTML = esp32Status[5];
         document.getElementById("TOFreading").innerHTML = esp32Status[6];
-        document.getElementById("LeftLoc").innerHTML = esp32Status[7];
-        document.getElementById("FlLoc").innerHTML = esp32Status[8];
-        document.getElementById("ForwardLoc").innerHTML = esp32Status[9];
-        document.getElementById("FrLoc").innerHTML = esp32Status[10];
-        document.getElementById("RightLoc").innerHTML = esp32Status[11];
 
         }
     };
@@ -442,10 +450,99 @@ function checkState() {
   }
 
 
+//Scan map javascript from Mark Yim
+// Display Elements
+var c = document.getElementById("myCanvas");
+var ctx = c.getContext("2d");
+ctx.font="14px Arial";
+
+var ch = [];
+var scansize=45;
+var zoom = 8;
+
+
+
+function zoomf() {
+  if (zoom == 8) zoom = 2;
+  else zoom = 8;
+  getData();
+}
+
+function drawScreen() {
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.strokeStyle = "#008800";
+  ctx.beginPath();
+  ctx.setLineDash([1, 5]);
+
+  // draw distance lines
+  for (let i=1; i < 8; i++) {
+    ctx.moveTo(0, i * 50);
+    ctx.lineTo(c.width, i * 50);
+    ctx.fillText(String((8-i)*50*zoom)+" mm",20,i*50);
+  }
+  ctx.stroke();
+
+  // draw origin (robot as circle)
+  ctx.beginPath();
+  ctx.arc(c.width/2, c.height-2, 30/zoom, 0, 2 * Math.PI, false);
+  ctx.fill();
+  ctx.stroke();
+}
+
+function getData() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200 ) {
+      updateGraph(this);
+    }
+  };
+  xhttp.open("GET", "up", true);
+  xhttp.send();
+}
+
+function radius(i){return ch[i+1]; }
+
+function theta(i){ return ch[i+1+scansize]*Math.PI/180; }
+
+function x(i){     return radius(i)*Math.cos(theta(i))/zoom; }
+
+function y(i){     return radius(i)*Math.sin(theta(i))/zoom; }
+
+function drawDataCircles() {
+  ctx.setLineDash([]);
+  for (let i=0; i < scansize; i++) {
+    ctx.beginPath();
+    ctx.arc(c.width/2 + y(i), c.height - x(i),
+            radius(i)/80, 0, 2*Math.PI);
+    ctx.stroke();
+  }
+}
+
+function updateGraph(xhttp) {
+      scansize = parseInt(xhttp.responseText); // get 1st value
+      drawScreen();
+
+      // draw old data in light green
+      ctx.strokeStyle = "#88FF88";
+      drawDataCircles();
+
+      // draw new data in dark green
+      ch = xhttp.responseText.split(","); // get ranging data
+      ctx.strokeStyle = "#008800";
+      drawDataCircles();
+//  debug.innerHTML = ch; // debugging print
+}
+
+
+
+
+
+
+
 
 
 
 </script>
 
-
+</body>
 </html>

@@ -156,11 +156,11 @@ right:2.5%;
   <button class="buttonBot" type="button" onclick="motorslowdownbutton" id="motorslowdownbutton">[down] Slow down</button>
 
   <div class="space2">Autonomous functions </div> <br>
-  <button class="button" type="button" onclick="onWall()" id="onWallbutton">[Y]Get on wall</button>
-  <button class="button" type="button" onclick="wallfollow()" id="wallfollowbutton">[U]Wall follow</button>
-  <button class="button" type="button" onclick="ccwturn()" id="ccwturnbutton">[I]-90 degree turn</button>
-  <button class="button" type="button" onclick="cwturn()" id="cwturnbutton">[P]+90 degree turn</button>
   <button class="button" type="button" onclick="scancan()" id="scanbutton">[O]Scan</button>
+   <button class="button" type="button" onclick="ccwturn()" id="ccwturnbutton">[I]-90 degree turn</button>
+  <button class="button" type="button" onclick="cwturn()" id="cwturnbutton">[P]+90 degree turn</button>
+  <button class="button" type="button" onclick="onWall()" id="onWallbutton">[Y]Get on wall</button>
+  <button class="button" type="button" onclick="wallfollow()" id="wallfollowbutton">[U]Wall follow</button> 
   <button class="button" type="button" onclick="caref" id="carefulfoward">[H]Foward</button>
   <button class="button" type="button" onclick="GrabCan" id="GrabCanButton">[H]GrabCan</button>
 
@@ -175,6 +175,7 @@ right:2.5%;
  document.addEventListener('keydown', keyDownHandler, true);
  document.addEventListener('keyup', keyUpHandler, true);
  var reset=0;
+ var resetHome=0;
  var forwardstate=0;
  var rightstate=0;
  var rotatestate=0;
@@ -189,15 +190,15 @@ var auton=0;
 var Onwallstate=0;
 var Scanstate=0;
 var ScanInterval;
+var Wallfollowstate=0;
+var CWturnState=0;
+
+
 var esp32message=[];
 var esp32Status=[];
 
 
 sendState();
-
-
-
-
 
 
 
@@ -303,15 +304,31 @@ function keyDownHandler(event) {
        document.getElementById("scanbutton").style = "background-color:#008CBA";
       
      }
+     }
      
+      if(code == 80 || code == "p") { // p key
+      CWturnState=1;
+      auton=1;
+      document.getElementById("cwturnbutton").style = "background-color:lime";
+    }
+     if(code == 73 || code == "i") { // i key
+      CWturnState=-1;
+      auton=1;
+      document.getElementById("ccwturnbutton").style = "background-color:lime";
+    }
+
+
+
       
     }
 
 
 
+    if(code == 189 || code == "-") { // k key
+      resetHome= 1;
+      document.getElementById("resethomebutton").style = "background-color:red";
 
- }
-
+    }
   if(code == 82 || code == "r") { // k key
       reset= 1;
       document.getElementById("resetbutton").style = "background-color:red";
@@ -386,11 +403,17 @@ function keyUpHandler(event) {
 
   }
 
+    if(code == 189 || code == "-") { // k key
+      resetHome= 1;
+      document.getElementById("resethomebutton").style = "background-color:orange";
+
+    }
     if(code == 82 || code == "r") { // k key
       reset= 1;
       document.getElementById("resetbutton").style = "background-color:orange";
 
     }
+    
     updateState();
 
   }
@@ -399,7 +422,7 @@ function sendState() {
     var xhttp = new XMLHttpRequest();
     //sets the url that we use to get the attach handler
     var str="Orders?val=";
-    var res=str.concat(reset,",",auton,",",forwardstate,",",rightstate,",",rotatestate,",",motorspeedstate,",",Sensorservostate,",",Gripperstate,",",Onwallstate,",",Scanstate);
+    var res=str.concat(resetHome,",",reset,",",auton,",",forwardstate,",",rightstate,",",rotatestate,",",motorspeedstate,",",Sensorservostate,",",Gripperstate,",",Onwallstate,",",Scanstate,",",CWturnState);
     xhttp.onreadystatechange = function() {
         if (this.status == 200 && this.readyState == 4) {
   //whatever you send as plain text or html in the function attached to the Orders?val=  attach handler gets displayed here
