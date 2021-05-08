@@ -159,8 +159,7 @@ right:2.5%;
   <button class="button" type="button" onclick="scancan()" id="scanbutton">[O]Scan</button>
    <button class="button" type="button" onclick="ccwturn()" id="ccwturnbutton">[I]-90 degree turn</button>
   <button class="button" type="button" onclick="cwturn()" id="cwturnbutton">[P]+90 degree turn</button>
-  <button class="button" type="button" onclick="onWall()" id="onWallbutton">[Y]Get on wall</button>
-  <button class="button" type="button" onclick="wallfollow()" id="wallfollowbutton">[U]Wall follow</button> 
+  <button class="button" type="button" onclick="onWall()" id="onWallbutton">[Y]Get on wall</button> 
   <button class="button" type="button" onclick="caref" id="carefulfoward">[H]Foward</button>
   <button class="button" type="button" onclick="GrabCan" id="GrabCanButton">[H]GrabCan</button>
 

@@ -18,7 +18,7 @@
 #define MotorDirection3 27
 #define MotorDirection4 14
 
-#define MotorFrequency 20000
+#define MotorFrequency 5000
 #define MotorResolutionBits 14
 #define MotorResolution ((1<<MotorResolutionBits)-1)  // this is 2^MotorResolutionBits -1
 #define Touch1 33
@@ -36,9 +36,19 @@ int MotorSpeeds[4] = { MotorSpeed1, MotorSpeed2, MotorSpeed3, MotorSpeed4};
 int MotorDirections[4] = {MotorDirection1, MotorDirection2, MotorDirection3, MotorDirection4};
 int MotorChannels[4] = {MotorChannel1, MotorChannel2, MotorChannel3, MotorChannel4};
 
-
+//tester 
+const char* ssid     = "Tester";
+const char* password = "12345678";
+//home
+/*
 const char* ssid     = "Fios-G8WhZ";
 const char* password = "Jesuisungrenouille777";
+*/
+//upenn
+/*
+const char* ssid     = "#Skyroam_1t9";
+const char* password = "55687127";
+*/
 
 //update rates
 
@@ -47,7 +57,7 @@ int tofUpdateRate = 100000; //update rate of tof in microseconds
 int motorUpdateRate = 100; //update rate of motor in microseconds
 int positionUpdateRate = 100; //update rate at which we calculate position in microseconds
 int serverUpdateRate = 5000; //update the server
-float servolimit = 0.15; // duty cycle of servo to usable range
+
 
 //Esp32 Status
 unsigned long StartTime = micros();
@@ -59,9 +69,10 @@ unsigned long ServerUpdate = micros();
 unsigned long recieveUpdate = micros();
 char AutonomousState[30] = "False";
 
-int positionX = -1;
-int positionY = -1;
-int orientationTheta = -1;
+float positionX = -1;
+float positionY = -1;
+int orientationTheta = 90;
+int orientationIteration=0;
 int TOF = -1;
 bool SensorFailure = true;
 
@@ -78,7 +89,7 @@ int w4 = 0;
 #define LEDC_RESOLUTION  ((1<<LEDC_RESOLUTION_BITS)-1)
 #define LEDC_FREQ_HZ     60
 #define SERVO_PIN        4
-#define SERVO_SCAN       12   // can increase this to have wider sweep
+#define SERVO_SCAN       10  // can increase this to have wider sweep
 
 #define SERVO_PIN2   0
 #define LEDC_CHANNEL2 1
@@ -203,7 +214,7 @@ int right = 0;
 int clockwiserotate = 0;
 int motorspeedPercent = 0;
 int SensorState = 0;
-int GripperState = 0;
+int GripperState = 100;
 int OnwallState = 0;
 int ScanState = 0;
 int CWRotate90=0;
@@ -229,14 +240,14 @@ void RecieveState() {
   CWRotate90=getVal();
 
 
-  motorspeedPercent = Sconstrain(motorspeedPercent, 0, 100);
+  motorspeedPercent = Sconstrain(motorspeedPercent, 50, 100);
   SensorState = Sconstrain(SensorState, -50, 50);
   GripperState = Sconstrain(GripperState, 0, 100);
 
   String Direction = "[ X:" + String(right * motorspeedPercent) + "; Y:" + String(forward * motorspeedPercent) + "; Rotation:" + String(clockwiserotate * motorspeedPercent) + "]";
   //align it at zero
   String Speed = String( motorspeedPercent);
-  String Sensor = String((-1*SensorState)+6);
+  String Sensor = String((-1*SensorState));
   String Gripper = String(GripperState);
   String s = Direction + "," + Speed + "," + Sensor + "," + Gripper + ",";
   sendplain(s);
@@ -296,18 +307,46 @@ void setMotorDirection(int y, int x ,int cw) {
 //define end condition variable
 int onwall_init1 = 0;
 bool OnwallendCondition = false;
-
+int rightWall=0;
 bool onWallLoop() {
-  if (onwall_init1 > 100) {
-
-    return true;
-    strcpy(AutonomousState, "finished");
+  if(SensorState<0){
+     rightWall=1;
   }
-  else {
-    strcpy(AutonomousState, "onwall state iteration");
-    delay(10);
-    onwall_init1 += 1;
-    return false;
+  else{
+    rightWall=-1;
+  }
+ TOF=rangeToF();
+ 
+  if ((TOF>83 || TOF==0) && onwall_init1==0) {
+      onwall_init1+=1;
+      setMotorDirection(0,rightWall,0);
+      SetMotorSpeed(100* w1, 0);
+      SetMotorSpeed(100* w2, 1);
+      SetMotorSpeed(100* w3, 2);
+      SetMotorSpeed(100* w4, 3);
+      delay(250);
+      setMotorDirection(0,0,0);
+      SetMotorSpeed(0, 0);
+      SetMotorSpeed(0, 1);
+      SetMotorSpeed(0, 2);
+      SetMotorSpeed(0, 3);
+      return false;   
+      strcpy(AutonomousState, "Getting on Wall"); 
+  }
+  else if((TOF==7912 || TOF==96)|| onwall_init1>15){
+    strcpy(AutonomousState, "Sensor Broke"); 
+     return true;
+  }
+  else if(TOF>2000 || TOF==0){
+    strcpy(AutonomousState, "TOO far from wall"); 
+     return true;
+  }
+  else{ 
+      strcpy(AutonomousState, "Getting on Wall"); 
+    //prevents double entering the loop
+    strcpy(AutonomousState, "On Wall"); 
+    delay(500);
+    return true;
   }
 
 }
@@ -318,7 +357,7 @@ int rotate_init = 0;
 bool RotateEnd90 = false;
 
 
-
+//rotate car 90 degrees
 bool RotateLoop(int rotateDir) {
   if(rotate_init==0){
       strcpy(AutonomousState, "running");
@@ -336,6 +375,8 @@ bool RotateLoop(int rotateDir) {
       SetMotorSpeed(0, 2);
       SetMotorSpeed(0, 3);
       rotate_init=1;
+      //record the rotation
+      orientationTheta =(orientationTheta-rotateDir*90)%360;
       return true;
   }
   else{
@@ -366,12 +407,33 @@ void setup() {
     }
     Serial.println("Sensor not found");
   }
-  
-  WiFi.mode(WIFI_MODE_STA);
+    WiFi.mode(WIFI_MODE_STA);
   WiFi.begin(ssid, password);
-  WiFi.config(IPAddress(192, 168, 1, 109),
+
+//Mobile hotspot 
+ WiFi.config(IPAddress(192, 168, 43, 109), // change the last number to your assigned number
+              IPAddress(192, 168, 43, 1),
+              IPAddress(255, 255, 255, 0));
+
+
+
+  //home wifi 
+  
+/*
+ WiFi.config(IPAddress(192, 168, 43, 109), // change the last number to your assigned number
+              IPAddress(192, 168, 43, 1),
+              IPAddress(255, 255, 255, 0));
+
+              
+*/
+
+
+//upenn wifi
+/*
+ WiFi.config(IPAddress(192, 168, 1, 109),
               IPAddress(192, 168, 1, 1),
               IPAddress(255, 255, 255, 0));
+  */            
   failureCount = 0;
   while (WiFi.status() != WL_CONNECTED ) {
     delay(500);
@@ -452,13 +514,52 @@ void loop() {
     //end condition
    
     if (OnwallendCondition) {
-      reset = 1;
-    }
+      if(onwall_init1==0){
+      ledcAnalogWrite(LEDC_CHANNEL, SERVOOFF, LEDC_RESOLUTION);
+      delay(2);
+      setMotorDirection(0,-rightWall,0);
+      SetMotorSpeed(100* w1, 0);
+      SetMotorSpeed(100* w2, 1);
+      SetMotorSpeed(100* w3, 2);
+      SetMotorSpeed(100* w4, 3);
+      delay(150);
+      setMotorDirection(0,0,0);
+      SetMotorSpeed(0, 0);
+      SetMotorSpeed(0, 1);
+      SetMotorSpeed(0, 2);
+      SetMotorSpeed(0, 3);
+      }
+       onwall_init1=1;
+      
+       angle = 0;
+       reset = 1;
+       int orientationConeP=(orientationTheta+45)%360;
+       int orientationConeN=(orientationTheta-45)%360;
+       if( orientationConeN<0){
+         orientationConeN= orientationConeN+360;
+       }
+      if(orientationConeP<=135 && orientationConeN>=45  ){
+      orientationTheta=90;
+       }
+       else if (orientationConeP<=315 && orientationConeN>=225){
+        orientationTheta=270;
+       }
+       else if(orientationConeP<=225 &&  orientationConeN>=135){
+        orientationTheta=180;
+       }
+       else{
+        orientationTheta=0;
+       }
+        
+       }
   }
   if (OnwallState == 0) {
+  
     //reset initial conditions
     onwall_init1 = 0;
     OnwallendCondition = false;
+   
+  
   }
 
   while((CWRotate90== 1 || CWRotate90== -1) && reset != 1) {
@@ -481,7 +582,6 @@ void loop() {
 
   if (auton != 1) {
     //perform manual actions
-    strcpy(AutonomousState, "Manual Mode");
     
     setMotorDirection(forward,right,clockwiserotate);
     if (StartTime - MotorUpdate > motorUpdateRate) {
@@ -490,6 +590,22 @@ void loop() {
       SetMotorSpeed(motorspeedPercent * w2, 1);
       SetMotorSpeed(motorspeedPercent * w3, 2);
       SetMotorSpeed(motorspeedPercent * w4, 3);
+      orientationIteration=orientationIteration-clockwiserotate*motorspeedPercent;
+      if(orientationIteration>12500){
+        //add 5 degrees of orientation
+        orientationTheta = (orientationTheta+5)%360;
+        orientationIteration=0;
+      }
+      else if(orientationIteration<-12500){
+        orientationTheta = (orientationTheta-5)%360; 
+        orientationIteration=0;
+         if(orientationTheta<0){
+          orientationTheta=orientationTheta+360;
+        }
+        
+      }
+      
+
     }
 
     if (StartTime - ServoUpdate > servoUpdateRate && ScanState == 0) {
