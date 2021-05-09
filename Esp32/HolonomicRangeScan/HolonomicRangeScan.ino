@@ -226,8 +226,7 @@ int OnwallState = 0;
 int ScanState = 0;
 int CWRotate90=0;
 int CarefulFowardState=0;
-
-
+int initWall=0;
 
 void RecieveState() {
 
@@ -247,6 +246,7 @@ void RecieveState() {
   ScanState = getVal();
   CWRotate90=getVal();
   CarefulFowardState=getVal();
+  initWall=getVal();
 
 
   motorspeedPercent = Sconstrain(motorspeedPercent, 50, 100);
@@ -320,6 +320,7 @@ int onwall_init2 = 0;
 bool OnwallendCondition = false;
 int rightWall=0;
 int iterationlimitOnwall=20;
+int WallRange=100;
 bool onWallLoop() {
   if(SensorState<0){
      rightWall=1;
@@ -328,8 +329,7 @@ bool onWallLoop() {
     rightWall=-1;
   }
  TOF=rangeToF();
- 
-  if (((TOF>90)) && (onwall_init1==0&& onwall_init2<iterationlimitOnwall) ) {
+  if (((TOF>WallRange)) && (onwall_init1==0 && onwall_init2<iterationlimitOnwall) ) {
       onwall_init2+=1;
       setMotorDirection(0,rightWall,0);
       SetMotorSpeed(100* w1, 0);
@@ -403,15 +403,42 @@ int CarefulFowardinit=0;
 int CarefulFowardinit2=0;
 bool CarefulFowardEnd=false;
 int inface=0;
+int fowardscansize=5;
+int rangelimit=150;
+int minInface=10000;
+
+int leftscanlim = map(-fowardscansize, -50, 50, FULLBACK, FULLFRONT);
+int rightscanlim = map(fowardscansize, -50, 50, FULLBACK, FULLFRONT);
+
 bool CarefulFoward() {
   //add && !some end condition
   //implement small sweep right now we just check directly in front
+  int i;
+  int fowardangle;
+  
+  if(CarefulFowardinit==0){
+    
+  
+  for( i=0;i<= 2*fowardscansize; i++){
+    fowardangle=map(i,0,2*fowardscansize,leftscanlim,rightscanlim);
+    ledcAnalogWrite(LEDC_CHANNEL, fowardangle, LEDC_RESOLUTION);
+    delay(2);
+    inface=rangeToF();
+    delay(100);
+    if((inface<minInface && inface!=0) && inface!=96){
+      minInface=inface;
+    }
+    if(minInface<rangelimit){
+      i=fowardscansize+1;
+    }
+  }
+  }
   angle = 0;
   ledcAnalogWrite(LEDC_CHANNEL, SERVOOFF, LEDC_RESOLUTION);
   delay(2);
   inface=rangeToF();
   delay(50);
-  if(CarefulFowardinit==0 && (((inface==0||inface>400) && inface!=96) && CarefulFowardinit2< iterationlimitFoward)){
+  if(CarefulFowardinit==0 && (((minInface==10000||minInface>rangelimit)) && CarefulFowardinit2< iterationlimitFoward)){
       CarefulFowardinit2+=1;
       strcpy(AutonomousState, "Walking forward nothing in face");
       setMotorDirection(1,0,0);
@@ -570,18 +597,18 @@ void loop() {
       SetMotorSpeed(100* w2, 1);
       SetMotorSpeed(100* w3, 2);
       SetMotorSpeed(100* w4, 3);
-      delay(150);
+      delay(175);
       setMotorDirection(0,0,0);
       SetMotorSpeed(0, 0);
       SetMotorSpeed(0, 1);
       SetMotorSpeed(0, 2);
       SetMotorSpeed(0, 3);
       }
-       onwall_init1=1;
-      
-       angle = 0;
+      onwall_init1=1;
+      angle = 0;
        reset = 1;
-       int orientationConeP=(orientationTheta+45)%360;
+
+        int orientationConeP=(orientationTheta+45)%360;
        int orientationConeN=(orientationTheta-45)%360;
        if( orientationConeN<0){
          orientationConeN= orientationConeN+360;
@@ -600,6 +627,9 @@ void loop() {
        }
         
        }
+       
+       
+      
   }
   if (OnwallState == 0) {
   
@@ -633,8 +663,10 @@ void loop() {
     serve(server, body);
     //perform rotate 
     //end condition
+    ledcAnalogWrite(LEDC_CHANNEL2, SERVOOFF, LEDC_RESOLUTION);
     CarefulFowardEnd=CarefulFoward();
     if (CarefulFowardEnd) {
+      CarefulFowardinit = 1;
       reset = 1;
       serve(server, body);
     }
@@ -643,13 +675,18 @@ void loop() {
     //reset initial conditions
     CarefulFowardinit = 0;
     CarefulFowardinit2=0;
+    minInface=10000;
     CarefulFowardEnd = false;
   }
 
 
 if (auton != 1) {
   //perform manual actions
-    
+    if(initWall==1){
+      delay(50);
+      WallRange=rangeToF();
+      strcpy(AutonomousState, "Wall init");
+    }
     setMotorDirection(forward,right,clockwiserotate);
     if (StartTime - MotorUpdate > motorUpdateRate) {
       MotorUpdate = StartTime;

@@ -172,7 +172,7 @@ right:2.5%;
     <button class="button" type="button" onclick="caref" id="carefulfoward">[9]Foward careful</button>
   <button class="button" type="button" onclick="cwturn()" id="cwturnbutton">[P]+90 degree turn</button><br>
   <button class="button" type="button" onclick="onWall()" id="onWallbutton">[Y]Get on wall</button> 
-  <button class="button" type="button" onclick="GrabCan" id="GrabCanButton">[H]GrabCan</button>  
+  <button class="button" type="button" onclick="initwall()" id="initWallbutton">[H] Init wall</button>  
   <button class="button" type="button" onclick="resethome()" id="resethomebutton">[-]reset Home</button>
    <button class="button" type="button" onclick="reset()" id="resetbutton"> [R] RESET</button><br>
    </div>
@@ -201,7 +201,7 @@ var CWturnState=0;
 var carefulForwardState=0;
 var esp32message=[];
 var esp32Status=[];
-
+var initWallState=0;
 
 sendState();
 
@@ -286,6 +286,19 @@ function keyDownHandler(event) {
      if(code == 75 || code == "k") { // k key
       Gripperstate= -1;
       document.getElementById("closebutton").style = "background-color:lime";
+    }
+
+     if(code == 72 || code == "h") { // k key
+      if(initWallState==0){
+      initWallState= 1;
+      document.getElementById("initWallbutton").style = "background-color:lime";
+      }
+      else{
+        initWallState=0;
+        document.getElementById("initWallbutton").style = "background-color:#008CBA";
+      }
+
+      
     }
 
     //autonomous functions
@@ -436,7 +449,7 @@ function sendState() {
     var xhttp = new XMLHttpRequest();
     //sets the url that we use to get the attach handler
     var str="Orders?val=";
-    var res=str.concat(resetHome,",",reset,",",auton,",",forwardstate,",",rightstate,",",rotatestate,",",motorspeedstate,",",Sensorservostate,",",Gripperstate,",",Onwallstate,",",Scanstate,",",CWturnState,",",carefulForwardState);
+    var res=str.concat(resetHome,",",reset,",",auton,",",forwardstate,",",rightstate,",",rotatestate,",",motorspeedstate,",",Sensorservostate,",",Gripperstate,",",Onwallstate,",",Scanstate,",",CWturnState,",",carefulForwardState,",",initWallState);
     xhttp.onreadystatechange = function() {
         if (this.status == 200 && this.readyState == 4) {
   //whatever you send as plain text or html in the function attached to the Orders?val=  attach handler gets displayed here
