@@ -29,6 +29,16 @@ const char body[] PROGMEM = R"===(
   cursor: pointer;
 }
 
+.buttonAuton {
+  border: none;
+  color: white;
+  background-color: #008CBA;
+  padding: 15px 32px;
+  text-decoration: none;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+}
 
 #leftrotatebutton{
   margin: 5px 40px;
@@ -156,18 +166,17 @@ right:2.5%;
   <button class="buttonBot" type="button" onclick="motorslowdownbutton" id="motorslowdownbutton">[down] Slow down</button>
 
   <div class="space2">Autonomous functions </div> <br>
+  <div class="Auton Buttons" style="text-align: center;" >
   <button class="button" type="button" onclick="scancan()" id="scanbutton">[O]Scan</button>
    <button class="button" type="button" onclick="ccwturn()" id="ccwturnbutton">[I]-90 degree turn</button>
-  <button class="button" type="button" onclick="cwturn()" id="cwturnbutton">[P]+90 degree turn</button>
+    <button class="button" type="button" onclick="caref" id="carefulfoward">[9]Foward careful</button>
+  <button class="button" type="button" onclick="cwturn()" id="cwturnbutton">[P]+90 degree turn</button><br>
   <button class="button" type="button" onclick="onWall()" id="onWallbutton">[Y]Get on wall</button> 
-  <button class="button" type="button" onclick="caref" id="carefulfoward">[H]Foward</button>
-  <button class="button" type="button" onclick="GrabCan" id="GrabCanButton">[H]GrabCan</button>
-
-  <button class="buttonBot" type="button" onclick="setloc1()" id="setlocation1"> [Z] Set Location 1 </button>
-  <button class="buttonBot" type="button" onclick="goloc1()" id="golocation1">[1] go to location 1 </button>
-  <button class="buttonBot" type="button" onclick="resethome()" id="resethomebutton">[-]reset Home</button>
-  <button class="buttonBot" type="button" onclick="gohome()" id="homebutton"> [0] Go Home</button>
-   <button class="buttonBot" type="button" onclick="reset()" id="resetbutton"> [R] RESET</button><br>
+  <button class="button" type="button" onclick="caref" id="carefulfowardWall">[H]Foward Wall</button>
+  <button class="button" type="button" onclick="GrabCan" id="GrabCanButton">[H]GrabCan</button>  
+  <button class="button" type="button" onclick="resethome()" id="resethomebutton">[-]reset Home</button>
+   <button class="button" type="button" onclick="reset()" id="resetbutton"> [R] RESET</button><br>
+   </div>
 
 <script>
 

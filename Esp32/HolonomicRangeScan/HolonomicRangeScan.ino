@@ -37,17 +37,20 @@ int MotorDirections[4] = {MotorDirection1, MotorDirection2, MotorDirection3, Mot
 int MotorChannels[4] = {MotorChannel1, MotorChannel2, MotorChannel3, MotorChannel4};
 
 //tester 
+/*
 const char* ssid     = "Tester";
 const char* password = "12345678";
+*/
 //home
-/*
 const char* ssid     = "Fios-G8WhZ";
 const char* password = "Jesuisungrenouille777";
-*/
+
 //upenn
+
 /*
 const char* ssid     = "#Skyroam_1t9";
 const char* password = "55687127";
+
 */
 
 //update rates
@@ -306,6 +309,7 @@ void setMotorDirection(int y, int x ,int cw) {
 //autonomous functions
 //define end condition variable
 int onwall_init1 = 0;
+int onwall_init2 = 0;
 bool OnwallendCondition = false;
 int rightWall=0;
 bool onWallLoop() {
@@ -317,8 +321,8 @@ bool onWallLoop() {
   }
  TOF=rangeToF();
  
-  if ((TOF>83 || TOF==0) && onwall_init1==0) {
-      onwall_init1+=1;
+  if ((TOF>83) && onwall_init1==0) {
+      onwall_init2+=1;
       setMotorDirection(0,rightWall,0);
       SetMotorSpeed(100* w1, 0);
       SetMotorSpeed(100* w2, 1);
@@ -333,7 +337,7 @@ bool onWallLoop() {
       return false;   
       strcpy(AutonomousState, "Getting on Wall"); 
   }
-  else if((TOF==7912 || TOF==96)|| onwall_init1>15){
+  else if((TOF==7912 || TOF==96)|| onwall_init2>15){
     strcpy(AutonomousState, "Sensor Broke"); 
      return true;
   }
@@ -411,29 +415,32 @@ void setup() {
   WiFi.begin(ssid, password);
 
 //Mobile hotspot 
- WiFi.config(IPAddress(192, 168, 43, 109), // change the last number to your assigned number
-              IPAddress(192, 168, 43, 1),
-              IPAddress(255, 255, 255, 0));
-
-
-
-  //home wifi 
-  
 /*
  WiFi.config(IPAddress(192, 168, 43, 109), // change the last number to your assigned number
               IPAddress(192, 168, 43, 1),
               IPAddress(255, 255, 255, 0));
 
-              
 */
+
+  //home wifi 
+  
+
+ WiFi.config(IPAddress(192, 168, 1, 109), // default gateway change the last number to your assigned number
+              IPAddress(192, 168, 1, 1), //default gateway
+              IPAddress(255, 255, 255, 0));//subnet mask
+
+              
+
 
 
 //upenn wifi
 /*
- WiFi.config(IPAddress(192, 168, 1, 109),
-              IPAddress(192, 168, 1, 1),
+
+ WiFi.config(IPAddress(192, 168, 43, 109),
+              IPAddress(192, 168, 43, 1),
               IPAddress(255, 255, 255, 0));
-  */            
+*/
+             
   failureCount = 0;
   while (WiFi.status() != WL_CONNECTED ) {
     delay(500);
@@ -557,6 +564,7 @@ void loop() {
   
     //reset initial conditions
     onwall_init1 = 0;
+    onwall_init2 = 0;
     OnwallendCondition = false;
    
   
