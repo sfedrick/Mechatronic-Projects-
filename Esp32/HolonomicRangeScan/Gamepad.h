@@ -172,7 +172,6 @@ right:2.5%;
     <button class="button" type="button" onclick="caref" id="carefulfoward">[9]Foward careful</button>
   <button class="button" type="button" onclick="cwturn()" id="cwturnbutton">[P]+90 degree turn</button><br>
   <button class="button" type="button" onclick="onWall()" id="onWallbutton">[Y]Get on wall</button> 
-  <button class="button" type="button" onclick="caref" id="carefulfowardWall">[H]Foward Wall</button>
   <button class="button" type="button" onclick="GrabCan" id="GrabCanButton">[H]GrabCan</button>  
   <button class="button" type="button" onclick="resethome()" id="resethomebutton">[-]reset Home</button>
    <button class="button" type="button" onclick="reset()" id="resetbutton"> [R] RESET</button><br>
@@ -198,10 +197,8 @@ var auton=0;
 var Onwallstate=0;
 var Scanstate=0;
 var ScanInterval;
-var Wallfollowstate=0;
 var CWturnState=0;
-
-
+var carefulForwardState=0;
 var esp32message=[];
 var esp32Status=[];
 
@@ -325,19 +322,29 @@ function keyDownHandler(event) {
       document.getElementById("ccwturnbutton").style = "background-color:lime";
     }
 
+/*
 
+  <button class="button" type="button" onclick="GrabCan" id="GrabCanButton">[H]GrabCan</button>  
 
-      
+*/
+if(code == 57 || code == "9") { // p key
+      carefulForwardState=1;
+      auton=1;
+      document.getElementById("carefulfoward").style = "background-color:lime";
     }
+        
+    
 
-
-
+    
+ }
+//reset keys hard reset power off esp32
     if(code == 189 || code == "-") { // k key
       resetHome= 1;
       document.getElementById("resethomebutton").style = "background-color:red";
 
     }
-  if(code == 82 || code == "r") { // k key
+//reset keys soft reset reload website
+  if(code == 82 || code == "r") { // r key
       reset= 1;
       document.getElementById("resetbutton").style = "background-color:red";
     }
@@ -387,7 +394,6 @@ function keyUpHandler(event) {
       motorspeedstate = 0;
       document.getElementById("motorslowdownbutton").style = "background-color:#008CBA";
     }
-
      if(code == 37 || code == "ArrowLeft") { // arrow left key
       Sensorservostate= 0;
       document.getElementById("sensorleft").style = "background-color:#008CBA";
@@ -430,7 +436,7 @@ function sendState() {
     var xhttp = new XMLHttpRequest();
     //sets the url that we use to get the attach handler
     var str="Orders?val=";
-    var res=str.concat(resetHome,",",reset,",",auton,",",forwardstate,",",rightstate,",",rotatestate,",",motorspeedstate,",",Sensorservostate,",",Gripperstate,",",Onwallstate,",",Scanstate,",",CWturnState);
+    var res=str.concat(resetHome,",",reset,",",auton,",",forwardstate,",",rightstate,",",rotatestate,",",motorspeedstate,",",Sensorservostate,",",Gripperstate,",",Onwallstate,",",Scanstate,",",CWturnState,",",carefulForwardState);
     xhttp.onreadystatechange = function() {
         if (this.status == 200 && this.readyState == 4) {
   //whatever you send as plain text or html in the function attached to the Orders?val=  attach handler gets displayed here
