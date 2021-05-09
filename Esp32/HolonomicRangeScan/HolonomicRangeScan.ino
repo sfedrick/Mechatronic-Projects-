@@ -41,17 +41,21 @@ int MotorChannels[4] = {MotorChannel1, MotorChannel2, MotorChannel3, MotorChanne
 const char* ssid     = "Tester";
 const char* password = "12345678";
 */
+
 //home
+
+/*
 const char* ssid     = "Fios-G8WhZ";
 const char* password = "Jesuisungrenouille777";
+*/
 
 //upenn
 
-/*
+
 const char* ssid     = "#Skyroam_1t9";
 const char* password = "55687127";
 
-*/
+
 
 //update rates
 
@@ -330,6 +334,7 @@ bool onWallLoop() {
   }
  TOF=rangeToF();
   if (((TOF>WallRange)) && (onwall_init1==0 && onwall_init2<iterationlimitOnwall) ) {
+      serve(server, body);
       onwall_init2+=1;
       setMotorDirection(0,rightWall,0);
       SetMotorSpeed(100* w1, 0);
@@ -373,6 +378,7 @@ bool RotateEnd90 = false;
 //rotate car 90 degrees
 bool RotateLoop(int rotateDir) {
   if(rotate_init==0){
+      serve(server, body);
       strcpy(AutonomousState, "running");
       delay(100);
       setMotorDirection(0,0,CWRotate90);
@@ -400,10 +406,10 @@ bool RotateLoop(int rotateDir) {
 
 //careful foward autonomous state
 int CarefulFowardinit=0;
-int CarefulFowardinit2=0;
+int CarefulFowardinit2=-2;
 bool CarefulFowardEnd=false;
 int inface=0;
-int fowardscansize=5;
+int fowardscansize=3;
 int rangelimit=150;
 int minInface=10000;
 
@@ -415,31 +421,29 @@ bool CarefulFoward() {
   //implement small sweep right now we just check directly in front
   int i;
   int fowardangle;
-  
-  if(CarefulFowardinit==0){
+  CarefulFowardinit2+=1;
+  if(CarefulFowardinit==0 && CarefulFowardinit2< iterationlimitFoward){
     
   
   for( i=0;i<= 2*fowardscansize; i++){
+    serve(server, body);
     fowardangle=map(i,0,2*fowardscansize,leftscanlim,rightscanlim);
     ledcAnalogWrite(LEDC_CHANNEL, fowardangle, LEDC_RESOLUTION);
-    delay(2);
+    delay(100);
     inface=rangeToF();
     delay(100);
     if((inface<minInface && inface!=0) && inface!=96){
       minInface=inface;
     }
     if(minInface<rangelimit){
-      i=fowardscansize+1;
+      i=2*fowardscansize+1;
     }
   }
   }
   angle = 0;
   ledcAnalogWrite(LEDC_CHANNEL, SERVOOFF, LEDC_RESOLUTION);
-  delay(2);
   inface=rangeToF();
-  delay(50);
   if(CarefulFowardinit==0 && (((minInface==10000||minInface>rangelimit)) && CarefulFowardinit2< iterationlimitFoward)){
-      CarefulFowardinit2+=1;
       strcpy(AutonomousState, "Walking forward nothing in face");
       setMotorDirection(1,0,0);
       SetMotorSpeed(100* w1, 0);
@@ -491,23 +495,23 @@ void setup() {
 */
 
   //home wifi 
-  
+  /*
 
  WiFi.config(IPAddress(192, 168, 1, 109), // default gateway change the last number to your assigned number
               IPAddress(192, 168, 1, 1), //default gateway
               IPAddress(255, 255, 255, 0));//subnet mask
 
-              
+   */           
 
 
 
 //upenn wifi
-/*
+
 
  WiFi.config(IPAddress(192, 168, 43, 109),
               IPAddress(192, 168, 43, 1),
               IPAddress(255, 255, 255, 0));
-*/
+
              
   failureCount = 0;
   while (WiFi.status() != WL_CONNECTED ) {
